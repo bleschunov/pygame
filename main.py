@@ -1,3 +1,4 @@
+# -*- coding: utf8 -*-
 import sys, time, random
 import pygame as pg
 
@@ -6,12 +7,7 @@ class Snake:
     def __init__(self, color):
         self.color = color
 
-    def next_step(self, screen, scale, food_coords):
-        eaten_up = False
-        game_flag = True
-        addit = [] # addit[0] - head, [ addit[1] - next chain if has food ]
-        self.location.pop(0)
-        addit.append(self.location[-1])
+    def next_step(self, scale, size, direct, snake_head_coords):
 
         step = {
             'up':       lambda head: [head[0], head[1] - scale],
