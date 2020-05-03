@@ -1,12 +1,10 @@
-import sys, time, copy, random
+import sys, time, random
 import pygame as pg
 
 class Snake:
 
-    def __init__(self, color, location = [ [210, 210], [210, 180], [210, 150] ], direct = 'up'):
+    def __init__(self, color):
         self.color = color
-        self.location = location
-        self.direct = direct
 
     def next_step(self, screen, scale, food_coords):
         eaten_up = False
@@ -23,46 +21,80 @@ class Snake:
         }
 
         if_step_over = {
-            'up':       lambda head: [head[0], height - scale] if head[1] < 0 else False,
-            'down':     lambda head: [head[0], 0] if head[1] > height - scale else False,
-            'right':    lambda head: [0, head[1]] if head[0] > width - scale else False,
-            'left':     lambda head: [width - scale, head[1]] if head[0] < 0 else False,
+            'up':       lambda head: [head[0], size[1] - scale] if head[1] < 0 else False,
+            'down':     lambda head: [head[0], 0] if head[1] > size[1] - scale else False,
+            'right':    lambda head: [0, head[1]] if head[0] > size[0] - scale else False,
+            'left':     lambda head: [size[0] - scale, head[1]] if head[0] < 0 else False,
         }
 
-        if_on_food = {
-            'up':       lambda head: [head[0], head[1] - scale],
-            'down':     lambda head: [head[0], head[1] + scale],
-            'right':    lambda head: [head[0] + scale, head[1]],
-            'left':     lambda head: [head[0] - scale, head[1]],
-        }
-
-        addit[0] = step[self.direct](addit[0])
-        if self.location.count(addit[0]) != 0: game_flag = False
-        if if_step_over[self.direct](addit[0]):
-            addit.append( if_step_over[self.direct](addit[0]) )
 
 
-        snake_on_food_at = food_coords.count([addit[0][0] + scale // 2, addit[0][1] + scale // 2])
-        if snake_on_food_at != 0:
-            eaten_up = [addit[0][0] + scale // 2, addit[0][1] + scale // 2]
-            addit.append( if_on_food[self.direct](addit[0]) )
+        new_snake_coords = step[direct](snake_head_coords)
+        step_over = if_step_over[direct](new_snake_coords)
+        if step_over:
+            new_snake_coords = []
+            new_snake_coords.extend(step_over) 
 
-        self.location.extend(addit)
+        return new_snake_coords
 
-        return eaten_up, game_flag
+class Game:
 
-    def display(self, screen, scale):
-        for coords in self.location:
-            snake_rect = *coords, scale, scale
-            pg.draw.rect(screen, self.color, snake_rect)
+    def __init__(self, width, height, scale, snake_coords = [[210,210],[210,180],[210, 150]], 
+                    food_coords = [], direct = 'up', speed = 0.3):
+        self.size = width, height
+        self.screen = pg.display.set_mode( (width, height) )
+        self.scale = scale
+        self.snake_coords = snake_coords
+        self.food_coords = food_coords
+        self.direct = direct
+        self.speed = speed
+        self.counter = 0
 
-class GameMode:
+        self.eat = {
+                'up':       lambda head: [head[0], head[1] - scale],
+                'down':     lambda head: [head[0], head[1] + scale],
+                'right':    lambda head: [head[0] + scale, head[1]],
+                'left':     lambda head: [head[0] - scale, head[1]],
+            }
 
-    def __init__(self):
-        pass
+    def game_process(self, snake, food):
+        time.sleep(self.speed)
 
-    def game_process(self, flag):
-        if not flag: sys.exit()
+
+
+
+        if self.counter == 15:
+            self.counter = 0;
+
+            busy_coords = []
+            busy_coords.extend(self.food_coords)
+            busy_coords.extend(list(map(lambda coords: [coords[0] + self.scale // 2, coords[1] + self.scale // 2], self.snake_coords)))
+            new_food_coords = food.birth(self.size, self.scale, busy_coords)
+            self.food_coords.append(new_food_coords)
+
+        new_snake_coords = snake.next_step(self.scale, self.size, self.direct, self.snake_coords[-1])
+
+        if self.snake_coords.count(new_snake_coords) != 0: sys.exit()
+
+        self.snake_coords.pop(0)
+        self.snake_coords.append(new_snake_coords)
+
+        scraps_coords = [new_snake_coords[0] + self.scale // 2, new_snake_coords[1] + self.scale // 2]
+        if self.food_coords.count(scraps_coords) != 0:
+            addit_snake_chain = []
+            addit_snake_chain.extend(self.eat[self.direct](new_snake_coords))
+            self.snake_coords.append(addit_snake_chain)
+            self.food_coords.pop(self.food_coords.index(scraps_coords))
+
+        self.counter += 1
+
+    def display(self, snake_color, food_color):
+        for coords in self.snake_coords:
+            snake_rect = *coords, self.scale, self.scale
+            pg.draw.rect(self.screen, snake_color, snake_rect)
+
+        for coords in self.food_coords:
+            pg.draw.circle(self.screen, food_color, coords, self.scale // 2)
 
 class Food:
 
@@ -79,62 +111,45 @@ class Food:
             x = random.randint(0, size[0] // scale) * scale + scale // 2
             y = random.randint(0, size[1] // scale) * scale + scale // 2
 
-            xy = [x, y]
-            if busy_coords.count(xy) == 0: break
-               
-        self.location.extend( [xy] )
+            new_food_coords = [x, y]
+            if busy_coords.count(new_food_coords) == 0: break
+            else: print('111')
 
-    def display(self, screen, scale):
-        for coords in self.location:
-            pg.draw.circle(screen, self.color, coords, scale // 2)
-
-    def clean_scraps(self, screen, coords):
-        if coords:
-            self.location.pop(self.location.index(coords))
+        return new_food_coords
 
 pg.init()
 
-size = width, height = 510, 510
-scale = 30
 black = 0, 0, 0
 orange = 255, 221, 0
 white = 255, 255, 255
-screen = pg.display.set_mode(size)
 
-snake = Snake(color = white, location = [ [210, 210], [210, 180], [210, 150], [210, 120], [210, 90] ])
+snake = Snake(color = white)
 food = Food(color = orange)
-game = GameMode()
+game = Game(width = 510, height = 510, scale = 30, speed = 0.2)
 
 while True:
-    time.sleep(0.3)
     for event in pg.event.get():
         if event.type == pg.QUIT: sys.exit() 
         if event.type == pg.KEYDOWN:
-            if event.key    == 273 and snake.direct != 'down': 
-                snake.direct = 'up'
+            if event.key    == 273 and game.direct != 'down': 
+                game.direct = 'up'
                 break
 
-            elif event.key  == 274 and snake.direct != 'up': 
-                snake.direct = 'down'
+            elif event.key  == 274 and game.direct != 'up': 
+                game.direct = 'down'
                 break
 
-            elif event.key  == 275 and snake.direct != 'left': 
-                snake.direct = 'right'
+            elif event.key  == 275 and game.direct != 'left': 
+                game.direct = 'right'
                 break
 
-            elif event.key  == 276 and snake.direct != 'right': 
-                snake.direct = 'left' 
+            elif event.key  == 276 and game.direct != 'right': 
+                game.direct = 'left' 
                 break
-    
-    busy_coords = []
-    busy_coords.extend(food.location + snake.location)
-    food.birth(size, scale, busy_coords)
-    screen.fill(black)
-    eaten_up, game_flag = snake.next_step(screen, scale, food.location)
-    game.game_process(game_flag)
-    snake.display(screen, scale)
-    food.clean_scraps(screen, eaten_up)
-    food.display(screen, scale)
+
+    game.game_process(snake, food)
+    game.screen.fill(black)
+    game.display(snake_color = white, food_color = orange)
     pg.display.flip()
 
 #cd documents/GitHub/pygame
