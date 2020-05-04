@@ -84,18 +84,17 @@ class Game:
 
         self.counter += 1
 
-    def display(self, snake_color, food_color):
+    def display(self):
         for coords in self.snake_coords:
             snake_rect = *coords, self.scale, self.scale
-            pg.draw.rect(self.screen, snake_color, snake_rect)
+            pg.draw.rect(self.screen, snake.color, snake_rect)
 
         for coords in self.food_coords:
-            pg.draw.circle(self.screen, food_color, coords, self.scale // 2)
+            pg.draw.circle(self.screen, food.color, coords, self.scale // 2)
 
 class Food:
 
-    def __init__(self, color, location = []):
-        self.location = location
+    def __init__(self, color):
         self.color = color 
 
     def birth(self, size, scale, busy_coords):
@@ -109,7 +108,6 @@ class Food:
 
             new_food_coords = [x, y]
             if busy_coords.count(new_food_coords) == 0: break
-            else: print('111')
 
         return new_food_coords
 
@@ -145,7 +143,7 @@ while True:
 
     game.game_process(snake, food)
     game.screen.fill(black)
-    game.display(snake_color = white, food_color = orange)
+    game.display()
     pg.display.flip()
 
 #cd documents/GitHub/pygame
